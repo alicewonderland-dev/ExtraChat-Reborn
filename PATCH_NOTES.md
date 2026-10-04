@@ -22,5 +22,28 @@ live `IPlayerCharacter`.
 Files changed: `client/ExtraChat/Plugin.cs`, `Client.cs`, `Ui/PluginUi.cs`,
 `Ui/ChannelList.cs`.
 
-Build with `dotnet build -c Release` in `client/` and load the resulting DLL as
-a Dalamud dev plugin. This build does not auto-update.
+## 1.3.12: own internal name ("ExtraChatReborn")
+
+Earlier builds kept the original's internal name, `ExtraChat`. Dalamud matches
+plugins, their install state, hidden-plugin list and settings file by internal
+name, so this fork collided with the original ExtraChat from the main
+repository. It is now `ExtraChatReborn` (assembly, manifest and settings file),
+and shows as "ExtraChat Reborn".
+
+- **Settings:** on the first run under the new name, settings are copied from
+  `pluginConfigs/ExtraChat.json` (keys, channels, order, colours) into
+  `pluginConfigs/ExtraChatReborn.json`. The original file isn't changed, so the
+  original plugin still works if switched back on.
+- **Run only one:** both plugins use the same `/extrachat`, `/ec`, `/eclcmd`
+  and `/ecl1`… commands, the same ChatTwo IPC names (kept so ChatTwo keeps
+  working), and, after the copy, the same account. Disable the original while
+  using this one.
+
+Files changed: `client/ExtraChat/ExtraChat.csproj`, `Plugin.cs`,
+`ExtraChat.yaml` → `ExtraChatReborn.yaml`.
+
+## Building
+
+Build with `dotnet build -c Release` in `client/`. The installable package is
+`client/ExtraChat/bin/Release/ExtraChatReborn/latest.zip`; clear `bin/` first if
+an older `ExtraChat` build is in it, or the package picks up its files.

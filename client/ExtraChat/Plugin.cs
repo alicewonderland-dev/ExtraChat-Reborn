@@ -1,4 +1,5 @@
-﻿using ASodium;
+﻿using System.Text.RegularExpressions;
+using ASodium;
 using Dalamud.Game.ClientState.Objects;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Gui.ContextMenu;
@@ -19,7 +20,10 @@ namespace ExtraChat;
 public class Plugin : IDalamudPlugin {
     internal const ushort DefaultColour = 578;
 
-    internal static string Name => "ExtraChat";
+    internal static string Name => "ExtraChat Reborn";
+
+    /// <summary>The original plugin's internal name, whose settings are copied on first run.</summary>
+    private const string OriginalInternalName = "ExtraChat";
 
     [PluginService]
     internal static IPluginLog Log { get; private set; }
@@ -99,7 +103,9 @@ public class Plugin : IDalamudPlugin {
     public Plugin() {
         SodiumInit.Init();
         WorldUtil.Initialise(this.DataManager!);
-        this.Config = this.Interface!.GetPluginConfig() as Configuration ?? new Configuration();
+        this.Config = this.Interface!.GetPluginConfig() as Configuration
+                      ?? this.MigrateOriginalConfig()
+                      ?? new Configuration();
         this.Client = new Client(this);
         this.Commands = new Commands(this);
         this.PluginUi = new PluginUi(this);
@@ -206,6 +212,52 @@ public class Plugin : IDalamudPlugin {
 
     internal void SaveConfig() {
         this.Interface.SavePluginConfig(this.Config);
+    }
+
+    /// <summary>
+    /// Earlier builds of this fork shared the original plugin's internal name ("ExtraChat"), and
+    /// so its settings file. On the first run under the new name, copy those settings (keys,
+    /// channels and their order, colours) into this plugin's own file. The original file is left
+    /// alone, so the original plugin keeps working if it is switched back on.
+    /// </summary>
+    private Configuration? MigrateOriginalConfig() {
+        var newFile = this.Interface.ConfigFile;
+        if (newFile.Exists || newFile.DirectoryName is not { } directory) {
+            return null;
+        }
+
+        var oldPath = Path.Combine(directory, $"{OriginalInternalName}.json");
+        if (!File.Exists(oldPath)) {
+            return null;
+        }
+
+        try {
+            // Dalamud saves .NET type names, which include the assembly name, so point them at this one.
+            var json = Regex.Replace(
+                File.ReadAllText(oldPath),
+                @"(ExtraChat\.[A-Za-z0-9_.]+), ExtraChat(?=[""\]])",
+                $"$1, {typeof(Plugin).Assembly.GetName().Name}"
+            );
+            File.WriteAllText(newFile.FullName, json);
+
+            if (this.Interface.GetPluginConfig() is Configuration migrated) {
+                Log.Info($"Copied settings from {oldPath}");
+                return migrated;
+            }
+
+            Log.Warning($"Settings copied from {oldPath} couldn't be read; starting fresh");
+        } catch (Exception ex) {
+            Log.Error(ex, $"Couldn't copy settings from {oldPath}; starting fresh");
+        }
+
+        // Don't leave a half-migrated file behind: the next start tries again.
+        try {
+            File.Delete(newFile.FullName);
+        } catch (Exception ex) {
+            Log.Warning(ex, $"Couldn't remove {newFile.FullName}");
+        }
+
+        return null;
     }
 
     internal void ShowInfo(string message) {

@@ -1,0 +1,10 @@
+name: ExtraChat Reborn
+author: Anna (patched by WonderlandDev)
+description: |-
+  ExtraChat adds end-to-end encrypted, cross-data-centre, unlimited linkshells
+  to the game. This is a patched fork of Anna's ExtraChat for current Dalamud.
+  On first run it copies your settings from the original ExtraChat; disable the
+  original while using this one.
+punchline: 'Cross-data-centre linkshells with unlimited members.'
+repo_url: https://github.com/alicewonderland-dev/ExtraChat-Reborn
+accepts_feedback: false
